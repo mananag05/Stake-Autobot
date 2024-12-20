@@ -28,20 +28,17 @@ const handleNextBet = (method, data) => {
     } else {
         responseData = currentData
     }
-  if (method) {
+  if (method) {// virtual
     let amountInfoString = null
     const winORlose = responseData.state.result > responseData.state.target ? "WON" : "LOST";
     if (winORlose == "WON"){
-        amountInfoString = `[${chalk.green(`[${winORlose}]`)} : ${VirtualBank.currentBetAmount * responseData.payoutMultiplier}] [Balance : ${VirtualBank.balance + VirtualBank.currentBetAmount * responseData.payoutMultiplier}]`
+        amountInfoString = `[${chalk.green(`[${winORlose}]`)} : ${VirtualBank.currentBetAmount * (responseData.payoutMultiplier - 1)}] [Balance : ${VirtualBank.balance + VirtualBank.currentBetAmount * (responseData.payoutMultiplier - 1)}]`
     } else {
         amountInfoString = `[${chalk.red(`[${winORlose}]`)} : ${VirtualBank.currentBetAmount}] [Balance : ${VirtualBank.balance - VirtualBank.currentBetAmount}]`
     }
-    
     console.log(`${amountInfoString} [CurrentLS : ${VirtualBank.currentLoseStreak}] [CurrentWS : ${VirtualBank.currentWinStreak}] [HighestLS : ${VirtualBank.highestLoseStreak}] [HighestWS : ${VirtualBank.highestWinStreak}]`);
-
-
-    if (responseData.state.result > responseData.state.target) {
-            VirtualBank.balance += VirtualBank.currentBetAmount * responseData.payoutMultiplier; 
+    if (responseData.state.result > responseData.state.target) { // won
+            VirtualBank.balance += VirtualBank.currentBetAmount * (responseData.payoutMultiplier - 1); 
             VirtualBank.currentBetAmount = VirtualBank.initialBetAmount; 
             VirtualBank.currentWinStreak += 1;
             VirtualBank.currentLoseStreak = 0; 
@@ -50,7 +47,7 @@ const handleNextBet = (method, data) => {
                 VirtualBank.highestWinStreak = VirtualBank.currentWinStreak;
             }
           setTimeout(() => startBetting(true,VirtualBank.currentBetAmount), 100)
-    } else {
+    } else { // lost
         VirtualBank.balance -= VirtualBank.currentBetAmount; 
         VirtualBank.currentLoseStreak += 1;
         VirtualBank.currentWinStreak = 0; 
@@ -65,11 +62,12 @@ const handleNextBet = (method, data) => {
         }
         setTimeout(() => startBetting(true,VirtualBank.currentBetAmount), 100)
     }
-  } else {
+  } else { // real
+    console.log('i didnr')
     let amountInfoString = null
     const winORlose = responseData.state.result > responseData.state.target ? "WON" : "LOST";
     if (winORlose == "WON"){
-        amountInfoString = `[${winORlose} : ${RealBank.currentBetAmount * responseData.payoutMultiplier}] [Balance : ${RealBank.balance + RealBank.currentBetAmount * responseData.payoutMultiplier}]`
+        amountInfoString = `[${winORlose} : ${RealBank.currentBetAmount * (responseData.payoutMultiplier - 1)}] [Balance : ${RealBank.balance + RealBank.currentBetAmount * (responseData.payoutMultiplier - 1)}]`
     } else {
         amountInfoString = `[${winORlose} : ${RealBank.currentBetAmount}] [Balance : ${RealBank.balance - RealBank.currentBetAmount}]`
     }
@@ -77,7 +75,7 @@ const handleNextBet = (method, data) => {
     console.log(`${amountInfoString} [CurrentLS : ${RealBank.currentLoseStreak}] [CurrentWS : ${RealBank.currentWinStreak}] [HighestLS : ${RealBank.highestLoseStreak}] [HighestWS : ${RealBank.highestWinStreak}] - riyal`);
 
     if (responseData.state.result > responseData.state.target) {
-            RealBank.balance += RealBank.currentBetAmount * responseData.payoutMultiplier; 
+            RealBank.balance += RealBank.currentBetAmount * (responseData.payoutMultiplier - 1) 
             RealBank.currentBetAmount = RealBank.initialBetAmount; 
             RealBank.currentWinStreak += 1;
             RealBank.currentLoseStreak = 0; 
@@ -87,7 +85,7 @@ const handleNextBet = (method, data) => {
             }
           setTimeout(() => startBetting(false,RealBank.currentBetAmount), 1200)
     } else {
-        RealBank.balance -= RealBank.currentBetAmount; 
+        RealBank.balance -= RealBank.currentBetAmount;
         RealBank.currentLoseStreak += 1;
         RealBank.currentWinStreak = 0; 
         if(RealBank.currentLoseStreak == RealBank.stopAtCertainLossStreak){
@@ -178,7 +176,7 @@ const startBetting = async (method, amountToBet) => {
             condition: "above",
             currency: "usdt",
             identifier: "IPVU8PxM6IMC8zNstEQUr",
-            target: 78,
+            target: 50,
           },
         }),
       });
@@ -207,13 +205,13 @@ const RealBank = {
 
 const VirtualBank = {
   initialBetAmount: 1,
-  balance: 100,
+  balance: 1000,
   highestWinStreak: 0,
   highestLoseStreak: 0,
   currentWinStreak: 0,
   currentLoseStreak: 0,
   currentBetAmount: 1,
-  stopAtCertainLossStreak: 4,
+  stopAtCertainLossStreak: 15,
   method: "virtual",
 };
 
