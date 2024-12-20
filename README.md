@@ -11,13 +11,6 @@ The Martingale strategy involves doubling your bet after each loss, so when you 
 - **Betting Amounts**: The initial bet is set to 0.01 units of currency.
 - **Loss Management**: The strategy includes a maximum loss limit to prevent bankruptcy. (Default MAX_LOSS = 1 unit)
 
-## Creating a Virtual Profile
-
-To create a virtual profile with an initial balance of 10.0 units of currency, you need to set up a `.env` file with the following content:
-```
-USER=<your_name>
-MONGO_CONNECTION_STRING=<your_mongodb_connection_string>
-```
 ## Warnings
 
 - **Not Suitable for Long-Term Use**: The Martingale strategy can lead to significant losses over time due to its exponential growth in bet size after each loss.
@@ -28,7 +21,7 @@ MONGO_CONNECTION_STRING=<your_mongodb_connection_string>
 1. **Clone the Repository**: 
    ```
    git clone https://github.com/mananag05/Stake-Tester.git
-   cd Stake-Tester
+   cd Stake-Autobot
    ```
 2. **Install Dependencies**:
    ```
@@ -37,6 +30,8 @@ MONGO_CONNECTION_STRING=<your_mongodb_connection_string>
 3. **Set Up Environment Variables: Create a .env file in the root directory with the following content**:
     ```
     USER=<your_name>
+    MONGO_CONNECTION_STRING=<your_mongodb_connection_string>
+    STAKE_COOKIE=<your_stake.com_cookie> // you can copy it from response headers of any api from stake.com
     ```
 4. **Run the Project*:
     ```
