@@ -17,6 +17,7 @@ To create a virtual profile with an initial balance of 10.0 units of currency, y
 ```
 USER=<your_name>
 MONGO_CONNECTION_STRING=<your_mongodb_connection_string>
+STAKE_COOKIE=<your_stake.com_cookie> // you can copy it from response headers of any api from stake.com
 ```
 ## Warnings
 
@@ -28,7 +29,7 @@ MONGO_CONNECTION_STRING=<your_mongodb_connection_string>
 1. **Clone the Repository**: 
    ```
    git clone https://github.com/mananag05/Stake-Tester.git
-   cd Stake-Tester
+   cd Stake-Autobot
    ```
 2. **Install Dependencies**:
    ```
