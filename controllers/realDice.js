@@ -1,7 +1,11 @@
-const { launch } = require("puppeteer");
+const puppeteerExtra = require('puppeteer-extra');
+const stealth = require('puppeteer-extra-plugin-stealth');
 const { cookie } = require("../constants/diceConstants");
 const readline = require("readline");
 const chalk = require('chalk');
+const { get } = require("mongoose");
+
+puppeteerExtra.use(stealth());  // Enable stealth plugin
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -9,13 +13,21 @@ const rl = readline.createInterface({
 });
 
 let browser, page;
-const initBroswer = async () => {
-  browser = await launch({
+const initBrowser = async () => {
+  browser = await puppeteerExtra.launch({
     args: ["--enable-features=NetworkService", "--no-sandbox"],
     ignoreHTTPSErrors: true,
   });
   page = await browser.newPage();
   await page.setRequestInterception(true);
+};
+
+const getConstraints = () => {
+  const result  = Math.random() < 0.5 ? "above" : "below";
+  return {
+    condition: result,
+    target : result == "above" ? 94 : 6
+  }
 };
 
 let currentData = null
@@ -30,14 +42,14 @@ const handleNextBet = (method, data) => {
     }
   if (method) {// virtual
     let amountInfoString = null
-    const winORlose = responseData.state.result > responseData.state.target ? "WON" : "LOST";
+    const winORlose = responseData.state.condition === 'above' ? responseData.state.result > responseData.state.target ? "WON" : "LOST" : responseData.state.result < responseData.state.target ? "WON" : "LOST";
     if (winORlose == "WON"){
         amountInfoString = `[${chalk.green(`[${winORlose}]`)} : ${VirtualBank.currentBetAmount * (responseData.payoutMultiplier - 1)}] [Balance : ${VirtualBank.balance + VirtualBank.currentBetAmount * (responseData.payoutMultiplier - 1)}]`
     } else {
         amountInfoString = `[${chalk.red(`[${winORlose}]`)} : ${VirtualBank.currentBetAmount}] [Balance : ${VirtualBank.balance - VirtualBank.currentBetAmount}]`
     }
     console.log(`${amountInfoString} [CurrentLS : ${VirtualBank.currentLoseStreak}] [CurrentWS : ${VirtualBank.currentWinStreak}] [HighestLS : ${VirtualBank.highestLoseStreak}] [HighestWS : ${VirtualBank.highestWinStreak}]`);
-    if (responseData.state.result > responseData.state.target) { // won
+    if (winORlose === 'WON') { // won
             VirtualBank.balance += VirtualBank.currentBetAmount * (responseData.payoutMultiplier - 1); 
             VirtualBank.currentBetAmount = VirtualBank.initialBetAmount; 
             VirtualBank.currentWinStreak += 1;
@@ -46,7 +58,7 @@ const handleNextBet = (method, data) => {
                 
                 VirtualBank.highestWinStreak = VirtualBank.currentWinStreak;
             }
-          setTimeout(() => startBetting(true,VirtualBank.currentBetAmount), 100)
+          setTimeout(() => startBetting(true, VirtualBank.currentBetAmount ,  getConstraints()), 300)
     } else { // lost
         VirtualBank.balance -= VirtualBank.currentBetAmount; 
         VirtualBank.currentLoseStreak += 1;
@@ -55,15 +67,14 @@ const handleNextBet = (method, data) => {
             VirtualBank.currentBetAmount = VirtualBank.initialBetAmount;
             VirtualBank.currentLoseStreak = 0;
         } else {
-            VirtualBank.currentBetAmount *= 2;
+            VirtualBank.currentBetAmount *= VirtualBank.nextBetMultiplier;
         }
         if (VirtualBank.currentLoseStreak > VirtualBank.highestLoseStreak) {
             VirtualBank.highestLoseStreak = VirtualBank.currentLoseStreak;
         }
-        setTimeout(() => startBetting(true,VirtualBank.currentBetAmount), 100)
+        setTimeout(() => startBetting(true,VirtualBank.currentBetAmount, getConstraints()), 300)
     }
   } else { // real
-    console.log('i didnr')
     let amountInfoString = null
     const winORlose = responseData.state.result > responseData.state.target ? "WON" : "LOST";
     if (winORlose == "WON"){
@@ -102,7 +113,7 @@ const handleNextBet = (method, data) => {
   }
 };
 
-const startBetting = async (method, amountToBet) => {
+const startBetting = async (method, amountToBet, betConstraints) => {
   if (method) {
     amountToBet = 0;
   }
@@ -173,10 +184,10 @@ const startBetting = async (method, amountToBet) => {
                       }`,
           variables: {
             amount: amountToBet,
-            condition: "above",
+            condition: betConstraints.condition  || "above",
             currency: "usdt",
             identifier: "IPVU8PxM6IMC8zNstEQUr",
-            target: 50,
+            target:  betConstraints.target || 94,
           },
         }),
       });
@@ -199,21 +210,33 @@ const RealBank = {
   currentWinStreak: 0,
   currentLoseStreak: 0,
   currentBetAmount: 0,
-  stopAtCertainLossStreak: 4,
+  stopAtCertainLossStreak: 3,
   method: "real",
 };
 
 const VirtualBank = {
-  initialBetAmount: 1,
-  balance: 1000,
+  initialBetAmount: 0.01,
+  balance: 10,
   highestWinStreak: 0,
   highestLoseStreak: 0,
   currentWinStreak: 0,
   currentLoseStreak: 0,
-  currentBetAmount: 1,
-  stopAtCertainLossStreak: 15,
+  currentBetAmount: 0.01,
+  stopAtCertainLossStreak: 5,
   method: "virtual",
+  nextBetMultiplier: 2,
 };
+
+// # Example usage
+// results = martingale_simulation(
+//     initial_bet=0.01,      # Very conservative initial bet to withstand losses
+//     balance=10,          
+//     target_balance=20, 
+//     reset_on_certain_lose_streak=5,  # Allow up to 5 consecutive losses before resetting the bet
+//     money_multiplier_on_win=16.5
+//     simulations=1000,  
+//     win_probability=0.6
+// )
 
 const getUserInput = () => {
   return new Promise((resolve) => {
@@ -225,9 +248,9 @@ const getUserInput = () => {
 };
 
 const realDice = async () => {
-  await initBroswer();
+  await initBrowser();
   const userMethod = await getUserInput();
-  startBetting(userMethod == VirtualBank.method , RealBank.initialBetAmount);
+  startBetting(userMethod == VirtualBank.method , RealBank.initialBetAmount , getConstraints());
 };
 
 module.exports = realDice;
